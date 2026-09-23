@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="single_endpoint_appFlow" doc:id="a6decc35-3092-4de5-b105-88f376fa6a8e" >
+		<http:listener doc:name="Listener" doc:id="dbb4a1bf-248e-4de2-ac03-0da934f16a42" config-ref="HTTP_Listener_config" path="/function" />
+		<choice doc:name="Choice" doc:id="b3a4b6d6-23d2-4b79-aae0-5dc530a28e6c" >
+			<when expression='#[attributes.queryParams.function == "map"]'>
+				<flow-ref doc:name="map Flow Reference" doc:id="d5aa07ef-744a-42d8-b349-1af2c44ad98b" name="map_functionSub_Flow"/>
+			</when>
+			<when expression='#[attributes.queryParams.function == "filter"]'>
+				<flow-ref doc:name="Filter Flow Reference" doc:id="8de46289-39d0-4519-b8cc-38f6d449fff8" name="filterSub_Flow" />
+			</when>
+			<when expression='#[attributes.queryParams.function == "groupBy"]'>
+				<flow-ref doc:name="Group By Flow Reference" doc:id="4387b4d8-10ce-4216-829b-11382da380c2" name="groupBySub_Flow" />
+			</when>
+			<when expression='#[attributes.queryParams.function == "mapObject"]'>
+				<flow-ref doc:name="Map Object Flow Reference" doc:id="2b76f831-0869-4325-aa61-eb793506fb3b" name="mapObjectSub_Flow" />
+			</when>
+			<when expression='#[attributes.queryParams.function == "filterObject"]'>
+				<flow-ref doc:name="Filter Object Flow Reference" doc:id="e2bbce46-a05e-4a5f-8bfb-fadfb882500b" name="filterObjectSub_Flow" />
+			</when>
+			<when expression='#[attributes.queryParams.function == "allFunction"]'>
+				<flow-ref doc:name="All functions Flow Reference" doc:id="2386c8fb-dc6c-4f94-b911-5928c8f87227" name="all_functionsSub_Flow"/>
+			</when>
+			<otherwise >
+				<set-payload value="#[%dw 2.0&#10;output application/json&#10;---&#10;&#10;{&quot;Result&quot;:'Invalid function Requested'}]" doc:name="Set Payload" doc:id="d3572e24-4212-4765-a895-720365cb5d13" />
+			</otherwise>
+		</choice>
+	</flow>
+	<sub-flow name="map_functionSub_Flow" doc:id="be471e10-81c8-4535-be53-71bba7935d75" >
+		<ee:transform doc:name="map" doc:id="37fab8e7-ecbb-4608-99f1-1dd598b669fa">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload.orders map (value, index) -> 
+ (index): {"id": value.orderId, "customerName": value.customer, "totalAmount": value.amount, "orderStatus": value.status}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="filterSub_Flow" doc:id="d8b5c6d9-2c1e-483e-8bf1-b2672c07827d" >
+		<ee:transform doc:name="filter" doc:id="82393707-0a5d-44fb-9dd6-528d2a3a00b3" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+ payload.orders filter ((item, index) -> item.amount >100)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="groupBySub_Flow" doc:id="82b36d5f-6f44-4563-b7b2-1a737ef1c220" >
+		<ee:transform doc:name="groupBy" doc:id="2bc5b553-f0a0-4fc4-9e28-602bcf91f772" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.orders groupBy ((item, index) -> item.country)
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="mapObjectSub_Flow" doc:id="a2163167-6b92-4b7f-9ae6-274fb4e0b0b1" >
+		<ee:transform doc:name="mapObject" doc:id="4c118f9f-40ca-4dc3-b1de-e8eff4aacf4e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.metadata  mapObject ((value, key, index) -> (index): {(upper(key)):value} )]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="filterObjectSub_Flow" doc:id="eb238667-aa24-4572-95b7-03b4d44db6fc">
+		<ee:transform doc:name="filterObject" doc:id="3d877445-ef95-4d5a-a68d-a1d319826120">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload.metadata filterObject $ != "OnlineStore"
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	<sub-flow name="all_functionsSub_Flow" doc:id="c571cb48-437d-4f06-aa9c-a29a7da70004" >
+		<ee:transform doc:name="All functions in One" doc:id="47db4ed3-479c-46bd-a677-b1015252fbb2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    processedOrders: payload.orders map {
+        orderId: $.orderId,
+        customer: $.customer,
+        amount: $.amount,
+        status: $.status
+    },
+
+    highValueOrders: payload.orders filter ($.amount > 200),
+
+    cancelledOrder: (payload.orders filter ($.status == "CANCELLED"))[0] default {},
+
+    ordersByCountry: payload.orders groupBy $.country,
+
+    metadataTransformed: payload.metadata  mapObject ((value, key) -> {(upper(key)):value}),
+
+    metadataFiltered: payload.metadata filterObject ((value, key) -> (key) == "source")
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+</mule>

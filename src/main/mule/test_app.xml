@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="a52d172b-d9db-4095-bd52-4a64859da9f7" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="283b45fa-acd4-4d5a-8d4f-c6bd95f31047" >
+		<db:my-sql-connection host="127.0.0.1" port="3306" user="root" password="root" database="Online_Shopping"/>
+	</db:config>
+	<flow name="addTwoNumbers_appFlow" doc:id="b44a02cb-f4aa-470c-9e21-3f38094c4b9e" >
+		<http:listener doc:name="Listener" doc:id="3ba60c78-4b10-455c-9395-05145293c878" config-ref="HTTP_Listener_config" path="/api/{a}/{b}"/>
+		<ee:transform doc:name="Add Two Numbers" doc:id="4c678587-56bb-4c5f-a664-e022d311d462">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+fun addTwoNumbers (a: Number, b: Number): Number = a+b
+---
+{
+	"result": addTwoNumbers(attributes.uriParams.a,attributes.uriParams.b)
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="retrieveProduct_appFlow" doc:id="4fe9cb38-27fa-4eb0-8333-eee8da16c512" >
+		<http:listener doc:name="Listener" doc:id="b9942812-72fd-4afe-a6c4-4c9cac9b3ee5" config-ref="HTTP_Listener_config" path="/product"/>
+		<db:select doc:name="Retrieve product MySQL" doc:id="60f1ef82-44d9-49fc-b99c-fa4c08ee020a" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO tb_product (product_name, description, category_id, video_url, price) VALUES (:product_name, :description, :category_id, :video_url, :price)]]></db:sql>
+			<db:input-parameters ><![CDATA[{
+product_name: payload.product_name,
+description: payload.description,
+category_id: payload.category_id,
+video_url: payload.video_url,
+price: payload.price
+}]]></db:input-parameters>
+		</db:select>
+	</flow>
+	<flow name="map_function_appFlow" doc:id="c370f367-f2c8-429b-89e2-4e6b12f2770d" >
+		<http:listener doc:name="Listener" doc:id="d8f197e2-b88d-4666-916a-048a32054007" config-ref="HTTP_Listener_config" path="/map"/>
+		<ee:transform doc:name="Transform Message" doc:id="225b4b94-cc51-4193-9962-57c4d4b82fb1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.orders map (value, index) -> 
+ (index): {"id": value.orderId, "customerName": value.customer, "totalAmount": value.amount, "orderStatus": value.status}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="filter_appFlow" doc:id="8f30d705-31d4-4272-b44b-796ea26b8dd4" >
+		<http:listener doc:name="Listener" doc:id="da9ca053-20d4-4bf0-bf11-9b807e252703" config-ref="HTTP_Listener_config" path="/filter"/>
+		<ee:transform doc:name="Transform Message" doc:id="32f808d6-0cd5-4a9c-b7a8-697b724b966f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+ payload.orders filter ((item, index) -> item.amount >100)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="groupBy_appFlow" doc:id="13807af4-f6a2-4593-955d-448306c38664" >
+		<http:listener doc:name="Listener" doc:id="c56e6a24-a007-4039-871c-95e2816f158a" config-ref="HTTP_Listener_config" path="/groupBy"/>
+		<ee:transform doc:name="Transform Message" doc:id="3417a9fc-98b2-4c01-90c9-ac6aa1d51a7d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.orders groupBy ((item, index) -> item.country)
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="mapObject_appFlow" doc:id="5fc3abc4-1aaf-4c86-a693-2c5baf3504db" >
+		<http:listener doc:name="Listener" doc:id="d72cef3e-e498-4417-97a8-4d2fefb9c897" config-ref="HTTP_Listener_config" path="/mapObject"/>
+		<ee:transform doc:name="Transform Message" doc:id="50d66491-ec52-40d4-b0e6-6bc1e862d7b1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.metadata  mapObject ((value, key, index) -> (index): {(upper(key)):value} )]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="filterObject_appFlow" doc:id="a64b9dfc-38c6-4e10-9e04-c5476172722e" >
+		<http:listener doc:name="Listener" doc:id="09fea259-1c95-4968-b47c-5d1770c7224d" config-ref="HTTP_Listener_config" path="/filterObject"/>
+		<ee:transform doc:name="Transform Message" doc:id="a02ea0ee-b813-4608-9b06-ea334df299c9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.metadata filterObject $ != "OnlineStore"
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
